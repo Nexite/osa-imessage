@@ -102,11 +102,11 @@ function send(handle, message) {
 
         try {
             target = Messages.buddies.whose({ handle: handle })[0]
-        } catch (e) {}
+        } catch (e) { }
 
         try {
             target = Messages.textChats.byId('iMessage;+;' + handle)()
-        } catch (e) {}
+        } catch (e) { }
 
         try {
             Messages.send(message, { to: target })
@@ -201,11 +201,34 @@ async function getRecentChats(limit = 10) {
     return chats
 }
 
+
+async function getRecentMessagesFromChatId(chatId, limit = 20, offset = 0) {
+    const db = await messagesDb.open()
+    const query = `
+        SELECT
+        message.guid as message_id,
+            chat.guid as chat_id,
+            text,
+            date,
+            handle.id as handle_id
+        FROM message
+        JOIN handle ON message.handle_id = handle.ROWID
+        JOIN chat_message_join ON chat_message_join.message_id = message.ROWID
+        JOIN chat on chat.ROWID = chat_message_join.chat_id
+        WHERE chat.guid = "${chatId}"
+        ORDER BY message.date DESC
+        LIMIT ${limit} OFFSET ${offset};
+    `
+    const messages = await db.all(query)
+    return messages
+}
+
 module.exports = {
     send,
     listen,
     handleForName,
     nameForHandle,
     getRecentChats,
+    getRecentMessagesFromChatId,
     SUPPRESS_WARNINGS: false,
 }
